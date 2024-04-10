@@ -1,5 +1,6 @@
 package exercise4.task2
 
+import exercise4.task1.BankAccount
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.*
@@ -78,30 +79,147 @@ import java.util.*
  *      ```
  */
 
-
-
-
 private val currentTime: LocalDateTime get() = LocalDateTime.now()
 
 private fun LocalDateTime.prettyPrint(): String {
-    val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
+    val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS")
     return this.format(formatter)
 }
 
 fun main() {
-    println(currentTime.prettyPrint())
     // Creating a Transactional Bank Account
-//    val account = TransactionalBankAccount("123456789", "John Doe")
+    val account = TransactionalBankAccount("123456789", "John Doe")
 
-    // Displaying account information
-//    account.displayAccountInfo()
-
-    // Depositing some money
-//    account.deposit(1000.0)
-
-    // Withdrawing some money
-//    account.withdraw(500.0)
+    // Making some transactions (successful and unsuccessful)
+    account.deposit(1000.0)
+    account.withdraw(500.0)
+    account.deposit(-100.0)
+    account.withdraw(2000.0)
+    account.deposit(500.0)
+    account.withdraw(100.0)
 
     // Displaying updated account information
-//    account.displayAccountInfo()
+    account.displayAccountInfo()
+
+    println("All Transactions Dates:")
+    account.getAllTransactions().forEach { println(it.getTransactionDate().prettyPrint()) }
+
+    println("\nTransactions with Amount > 600:")
+    account.getAllTransactionsBy { it.getAmount() > 600 }.forEach{ println(it.getAmount()) }
+
+    println("\nTransactions in the Last Hour:")
+    account.getTransactionsBetween(LocalDateTime.now().minusHours(1), LocalDateTime.now()).forEach { println(it.getAmount()) }
+
+    println("\nAll Successful Transactions:")
+    account.getAllSuccessfulTransactions().forEach { println(it.getAmount()) }
+
+    println("\nAll Failed Transactions:")
+    account.getAllFailedTransactions().forEach { println(it.getAmount()) }
+
+    println("\nAll Successful Deposits:")
+    account.getAllSuccessfulDeposits().forEach { println(it.getAmount()) }
+
+    println("\nAll Successful Withdrawals:")
+    account.getAllSuccessfulWithdrawals().forEach { println(it.getAmount()) }
+
+    println("\nAll Failed Deposits:")
+    account.getAllFailedDeposits().forEach { println(it.getAmount()) }
+
+    println("\nAll Failed Withdrawals:")
+    account.getAllFailedWithdrawals().forEach { println(it.getAmount()) }
+}
+
+class TransactionalBankAccount( accountNumber: String, accountHolderName: String, balance: Double = 0.0):
+    BankAccount(accountNumber, accountHolderName, balance) {
+
+    private var transactions = mutableListOf<Transaction>()
+
+    fun getAllTransactions(): List<Transaction> {
+        transactions.sortByDescending { it.getTransactionDate() }
+        return transactions
+    }
+    fun getAllTransactionsBy(predicate: (Transaction) -> Boolean) = transactions.filter(predicate)
+                                                                                .sortedByDescending{it.getTransactionDate()}
+    fun getTransactionsBetween(startDate: LocalDateTime, endDate: LocalDateTime) = getAllTransactionsBy { it.getTransactionDate() in startDate.rangeUntil(endDate) }
+
+    fun getAllFailedTransactions() = transactions.filter { it.getStatus() == TransactionStatus.FAILURE }
+    fun getAllSuccessfulTransactions() = transactions.filter { it.getStatus() == TransactionStatus.SUCCESS }
+
+    fun getAllFailedDeposits() = getAllFailedTransactions().filter { it.getTransactionType() == TransactionType.DEPOSIT }
+    fun getAllFailedWithdrawals() = getAllFailedTransactions().filter { it.getTransactionType() == TransactionType.WITHDRAW }
+    fun getAllSuccessfulDeposits() = getAllSuccessfulTransactions().filter { it.getTransactionType() == TransactionType.DEPOSIT }
+    fun getAllSuccessfulWithdrawals() = getAllSuccessfulTransactions().filter { it.getTransactionType() == TransactionType.WITHDRAW }
+
+    override fun deposit(amount: Double): Boolean {
+        val status = if (super.deposit(amount)) TransactionStatus.SUCCESS else TransactionStatus.FAILURE
+        transactions.add(
+            Transaction(
+                TransactionType.DEPOSIT,
+                amount,
+                balance - amount,
+                balance,
+                status
+            )
+        )
+        return status == TransactionStatus.SUCCESS
+    }
+
+    override fun withdraw(amount: Double): Boolean {
+        val transactionStatus: TransactionStatus = if (super.withdraw(amount)) TransactionStatus.SUCCESS
+        else TransactionStatus.FAILURE
+        val newTransaction = Transaction(TransactionType.WITHDRAW,
+                            amount,
+                            balance + amount,
+                            balance,
+                            transactionStatus)
+        transactions.add(newTransaction)
+        return transactionStatus == TransactionStatus.SUCCESS
+    }
+
+    override fun displayAccountInfo() {
+        println(
+            """
+                Account Holder: $accountHolderName
+                Account Number: $accountNumber
+                Balance: $balance
+                
+                Transactions:
+            """.trimIndent())
+        if (transactions.isEmpty()) println("No transactions recorded.\n".indent(4))
+        else transactions.forEach {
+                println(
+                    """        
+                      Transaction Date: ${it.getTransactionDate().prettyPrint()}
+                      Transaction Type: ${it.getTransactionType()}
+                      Amount: ${it.getAmount()}
+                      Old Balance: ${it.getOldBalance()}
+                      New Balance: ${it.getNewBalance()}
+                      Status: ${it.getStatus()}\n
+                    """.trimIndent().indent(4))
+            }
+    }
+}
+
+class Transaction (
+    private val transactionType: TransactionType,
+    private val amount: Double,
+    private val oldBalance: Double,
+    private val newBalance: Double,
+    private val transactionStatus: TransactionStatus,
+    private val transactionDate: LocalDateTime = currentTime
+) {
+    fun getTransactionType() = transactionType
+    fun getAmount() = amount
+    fun getOldBalance() = oldBalance
+    fun getNewBalance() = newBalance
+    fun getStatus() = transactionStatus
+    fun getTransactionDate() = transactionDate
+}
+
+enum class TransactionType {
+    WITHDRAW, DEPOSIT
+}
+
+enum class TransactionStatus {
+    SUCCESS, FAILURE
 }

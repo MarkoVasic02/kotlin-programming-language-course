@@ -34,19 +34,40 @@ package exercise4.task1
 
 
 fun main() {
-    TODO("Uncomment the lines above after the Bank Account class is implemented.")
     // Creating a Bank Account
-//    val account = BankAccount("123456789", "John Doe")
+    val account = BankAccount("123456789", "John Doe")
 
     // Displaying account information
-//    account.displayAccountInfo()
+    account.displayAccountInfo()
 
     // Depositing some money
-//    account.deposit(1000.0)
+    account.deposit(1000.0)
 
     // Withdrawing some money
-//    account.withdraw(500.0)
+    account.withdraw(500.0)
 
     // Displaying updated account information
-//    account.displayAccountInfo()
+    account.displayAccountInfo()
+}
+
+open class BankAccount(protected val accountNumber: String,
+                       protected val accountHolderName: String,
+                       protected var balance: Double = 0.0) {
+    open fun deposit(amount: Double): Boolean {
+        if (amount <= 0) return false
+        balance += amount
+        return true
+    }
+
+    open fun withdraw(amount: Double): Boolean {
+        if (amount > balance) return false
+        balance -= amount
+        return true
+    }
+
+    open fun displayAccountInfo() {
+        println("Account Holder: $accountNumber\n" +
+                "Account Number: $accountHolderName\n" +
+                "Balance: $balance\n")
+    }
 }
